@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { resolveMacOSSigningEnvironment } from './desktop-release-environment.mjs'
 
 /**
  * Execute a credential-bearing Apple command without exposing arguments or tool output on failure.
@@ -32,6 +33,7 @@ export async function withMacOSSigningKeychain(environment, action, run = execut
   const certificate = environment.CSC_LINK
   const exportPassword = environment.CSC_KEY_PASSWORD
   if (!certificate || exportPassword === undefined) throw new Error('desktop macOS signing: CSC_LINK and CSC_KEY_PASSWORD are required')
+  const signing = resolveMacOSSigningEnvironment(environment)
   const directory = mkdtempSync(join(tmpdir(), 'dsh-macos-signing-'))
   const keychain = join(directory, 'signing.keychain-db')
   const password = randomBytes(32).toString('base64')
@@ -47,7 +49,7 @@ export async function withMacOSSigningKeychain(environment, action, run = execut
     security(['set-key-partition-list', '-S', 'apple-tool:,apple:', '-s', '-k', password, keychain])
     const probe = join(directory, 'probe')
     run('/bin/cp', ['/usr/bin/true', probe])
-    run('/usr/bin/codesign', ['--force', '--sign', `Developer ID Application: ${environment.DSH_DESKTOP_MACOS_SIGNING_IDENTITY}`, '--keychain', keychain, '--timestamp', '--options', 'runtime', probe])
+    run('/usr/bin/codesign', ['--force', '--sign', `${signing.authority}: ${signing.signingIdentity}`, '--keychain', keychain, '--timestamp', '--options', 'runtime', probe])
     run('/usr/bin/codesign', ['--verify', '--strict', probe])
     const childEnvironment = { ...environment, CSC_KEYCHAIN: keychain }
     delete childEnvironment.CSC_LINK

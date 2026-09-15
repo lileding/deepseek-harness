@@ -91,9 +91,12 @@ export async function packageMacOSArtifacts(
     apple.verifySignature(zipApp, expected)
     apple.verifySignature(dmgApp, expected)
     const results = await Promise.allSettled([
-      timed('App notarization and ZIP', async () => {
-        await apple.notarize({ appPath: zipApp, ...credentials })
-        apple.verifyNotarization(zipApp, expected)
+      timed(credentials === undefined ? 'ZIP packaging' : 'App notarization and ZIP', async () => {
+        // A build that skips notarization has no ticket to staple or verify, so it is only zipped.
+        if (credentials !== undefined) {
+          await apple.notarize({ appPath: zipApp, ...credentials })
+          apple.verifyNotarization(zipApp, expected)
+        }
         await build({ format: 'zip', appPath: zipApp, output: zipOutput })
       }),
       timed('DMG creation and notarization', async () => {

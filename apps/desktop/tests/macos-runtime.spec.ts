@@ -12,7 +12,7 @@ function root(): string {
   roots.push(path)
   return path
 }
-const identity = { signingIdentity: 'Example (TEAMID1234)', teamId: 'TEAMID1234' }
+const identity = { signingIdentity: 'Example (TEAMID1234)', teamId: 'TEAMID1234', authority: 'Developer ID Application' }
 afterEach(() => {
   vi.resetAllMocks()
   for (const path of roots.splice(0)) rmSync(path, { recursive: true, force: true })

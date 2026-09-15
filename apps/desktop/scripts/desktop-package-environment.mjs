@@ -12,7 +12,7 @@ import { resolveDesktopPolicyEnvironment } from './desktop-policy-environment.mj
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SHARED_SETTING = /^(?:DSH_DESKTOP_(?:APP_ID|AUTO_UPDATE_ENV|MANDATORY_UPDATE_(?:CONFIG|(?:TEST|PROD)_ORIGIN))|DOWNLOAD_(?:TEST|PROD)_(?:ORIGIN|COS_BUCKET|COS_SECRET_ID|COS_SECRET_KEY))$/u
 const WINDOWS_SETTING = /^DSH_DESKTOP_WINDOWS_(?:CER_FILE|SIGNTOOL|KEY_CONTAINER|TOKEN_PIN)$/u
-const MACOS_SETTING = /^(?:DSH_DESKTOP_MACOS_(?:SIGNING_IDENTITY|TEAM_ID)|APPLE_(?:API_KEY|API_KEY_ID|API_ISSUER|ID|APP_SPECIFIC_PASSWORD|TEAM_ID|KEYCHAIN|KEYCHAIN_PROFILE)|CSC_(?:LINK|KEY_PASSWORD))$/u
+const MACOS_SETTING = /^(?:DSH_DESKTOP_MACOS_(?:SIGNING_IDENTITY|SIGNING_AUTHORITY|NOTARIZE|TEAM_ID)|APPLE_(?:API_KEY|API_KEY_ID|API_ISSUER|ID|APP_SPECIFIC_PASSWORD|TEAM_ID|KEYCHAIN|KEYCHAIN_PROFILE)|CSC_(?:LINK|KEY_PASSWORD))$/u
 const AMBIENT_RELEASE_SETTING = /^(?:DSH_DESKTOP_(?:APP_ID|AUTO_UPDATE_ENV|MANDATORY_UPDATE_.*|WINDOWS_.*|MACOS_.*)|APPLE_.*|(?:WIN_)?CSC_.*|DOWNLOAD_(?:TEST|PROD)_.*)$/iu
 const FILE_SETTINGS = ['DSH_DESKTOP_WINDOWS_CER_FILE', 'DSH_DESKTOP_WINDOWS_SIGNTOOL', 'APPLE_API_KEY', 'APPLE_KEYCHAIN', 'CSC_LINK']
 
@@ -96,8 +96,8 @@ export function validateDesktopPackageEnvironment(environment, target, options =
       throw new Error('desktop package: configure exactly one macOS notarization strategy; comment out the other strategies')
     }
     const credentials = resolveMacOSNotarizationEnvironment(environment)
-    if ('appleApiKey' in credentials) requireReadableFile(environment, 'APPLE_API_KEY')
-    if ('keychain' in credentials) requireReadableFile(environment, 'APPLE_KEYCHAIN')
+    if (credentials !== undefined && 'appleApiKey' in credentials) requireReadableFile(environment, 'APPLE_API_KEY')
+    if (credentials !== undefined && 'keychain' in credentials) requireReadableFile(environment, 'APPLE_KEYCHAIN')
     requireReadableFile(environment, 'CSC_LINK')
     if (environment.CSC_KEY_PASSWORD === undefined) {
       throw new Error('desktop package: CSC_KEY_PASSWORD must be set to the p12 export password (use an explicit empty value for an unencrypted p12)')

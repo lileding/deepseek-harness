@@ -8,12 +8,12 @@ import { loadDesktopPackageEnvironment } from './desktop-package-environment.mjs
 /**
  * Reject signature metadata that does not name the company release authority and team.
  * @param {string} details - Output from `codesign --display --verbose=4`.
- * @param {{ signingIdentity: string, teamId: string }} expected - Public release identity.
+ * @param {{ signingIdentity: string, teamId: string, authority: string }} expected - Public release identity.
  * @returns {void}
  */
 export function assertMacOSSignatureDetails(details, expected) {
   const fields = new Set(details.split(/\r?\n/u).map(line => line.trim()))
-  const expectedAuthority = `Authority=Developer ID Application: ${expected.signingIdentity}`
+  const expectedAuthority = `Authority=${expected.authority}: ${expected.signingIdentity}`
   const expectedTeam = `TeamIdentifier=${expected.teamId}`
   const missing = [expectedAuthority, expectedTeam].filter(field => !fields.has(field))
   if (missing.length > 0) {
@@ -24,7 +24,7 @@ export function assertMacOSSignatureDetails(details, expected) {
 /**
  * Require the signature properties Apple validates for executable runtime content.
  * @param {string} details - Output from `codesign --display --verbose=4`.
- * @param {{ signingIdentity: string, teamId: string }} expected - Public release identity.
+ * @param {{ signingIdentity: string, teamId: string, authority: string }} expected - Public release identity.
  * @returns {void}
  */
 export function assertMacOSRuntimeSignatureDetails(details, expected) {
@@ -110,7 +110,7 @@ function runCodeSign(args) {
  * Sign one Mach-O file using the packaging-owned CSC_KEYCHAIN; missing setup rejects before signing.
  * @param {string} path - Writable standalone Mach-O file.
  * @param {string} identifier - Stable code-signing identifier derived from the release app ID and CAS digest.
- * @param {{ signingIdentity: string, teamId: string }} expected - Public release identity.
+ * @param {{ signingIdentity: string, teamId: string, authority: string }} expected - Public release identity.
  * @param {string | undefined} entitlements - Optional entitlement plist for this executable.
  * @returns {Promise<void>} Resolves after codesign exits successfully.
  */
@@ -132,7 +132,7 @@ export async function signMacOSRuntimeCode(path, identifier, expected, entitleme
 /**
  * Verify one Mach-O file embedded in the runtime tree.
  * @param {string} path - Mach-O file to inspect.
- * @param {{ signingIdentity: string, teamId: string }} expected - Public release identity.
+ * @param {{ signingIdentity: string, teamId: string, authority: string }} expected - Public release identity.
  * @returns {void}
  */
 export function verifyMacOSRuntimeCode(path, expected) {
@@ -144,7 +144,7 @@ export function verifyMacOSRuntimeCode(path, expected) {
 /**
  * Verify the full application signature and its release owner.
  * @param {string} appPath - Path to the packaged `.app` directory.
- * @param {{ signingIdentity: string, teamId: string }} expected - Public release identity.
+ * @param {{ signingIdentity: string, teamId: string, authority: string }} expected - Public release identity.
  * @returns {void}
  */
 export function verifyMacOSSignature(appPath, expected) {
@@ -156,7 +156,7 @@ export function verifyMacOSSignature(appPath, expected) {
 /**
  * Verify an independently distributed application's signature, ticket, and Gatekeeper acceptance.
  * @param {string} appPath - Path to the stapled `.app` directory.
- * @param {{ signingIdentity: string, teamId: string }} expected - Public release identity.
+ * @param {{ signingIdentity: string, teamId: string, authority: string }} expected - Public release identity.
  * @returns {void}
  */
 export function verifyMacOSNotarizedApplication(appPath, expected) {
@@ -168,7 +168,7 @@ export function verifyMacOSNotarizedApplication(appPath, expected) {
 /**
  * Verify the release identity, stapled ticket, and Gatekeeper acceptance of one disk image.
  * @param {string} diskImagePath - Path to the packaged `.dmg` file.
- * @param {{ signingIdentity: string, teamId: string }} expected - Public release identity.
+ * @param {{ signingIdentity: string, teamId: string, authority: string }} expected - Public release identity.
  * @returns {void}
  */
 export function verifyMacOSDiskImage(diskImagePath, expected) {
@@ -182,14 +182,14 @@ export function verifyMacOSDiskImage(diskImagePath, expected) {
 /**
  * Verify the macOS application produced by electron-builder's signing phase.
  * @param {{ electronPlatformName: string, appOutDir: string, packager: { appInfo: { productFilename: string } } }} context - electron-builder hook context.
- * @param {{ signingIdentity: string, teamId: string }} expected - Public release identity.
+ * @param {{ signingIdentity: string, teamId: string, authority: string }} expected - Public release identity.
  * @returns {void}
  */
 export function verifyMacOSSignatureAfterSign(context, expected) {
   if (context.electronPlatformName !== 'darwin') return
   const appPath = resolve(context.appOutDir, `${context.packager.appInfo.productFilename}.app`)
   verifyMacOSSignature(appPath, expected)
-  process.stdout.write(`desktop macOS signing: verified Developer ID Application: ${expected.signingIdentity} (${expected.teamId})\n`)
+  process.stdout.write(`desktop macOS signing: verified ${expected.authority}: ${expected.signingIdentity} (${expected.teamId})\n`)
 }
 
 if (process.argv[1] !== undefined && import.meta.filename === resolve(process.argv[1])) {
@@ -200,5 +200,5 @@ if (process.argv[1] !== undefined && import.meta.filename === resolve(process.ar
   }
   const expected = resolveMacOSSigningEnvironment(loadDesktopPackageEnvironment('darwin'))
   verifyMacOSSignature(resolve(appPath), expected)
-  process.stdout.write(`desktop macOS signing: verified Developer ID Application: ${expected.signingIdentity} (${expected.teamId})\n`)
+  process.stdout.write(`desktop macOS signing: verified ${expected.authority}: ${expected.signingIdentity} (${expected.teamId})\n`)
 }

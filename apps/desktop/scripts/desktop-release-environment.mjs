@@ -6,8 +6,17 @@ export const DESKTOP_APP_ID_ENV = 'DSH_DESKTOP_APP_ID'
 /** Environment variable that supplies electron-builder's macOS certificate qualifier. */
 export const MACOS_SIGNING_IDENTITY_ENV = 'DSH_DESKTOP_MACOS_SIGNING_IDENTITY'
 
+/** Environment variable that supplies the certificate authority that issued the macOS signing identity. */
+export const MACOS_SIGNING_AUTHORITY_ENV = 'DSH_DESKTOP_MACOS_SIGNING_AUTHORITY'
+
+/** Environment variable that disables notarization for a locally signed macOS build. */
+export const MACOS_NOTARIZE_ENV = 'DSH_DESKTOP_MACOS_NOTARIZE'
+
 /** Environment variable that supplies the expected Apple Developer Team ID. */
 export const MACOS_TEAM_ID_ENV = 'DSH_DESKTOP_MACOS_TEAM_ID'
+
+/** Certificate authority assumed when the packaging environment names no other one. */
+const DEFAULT_MACOS_SIGNING_AUTHORITY = 'Developer ID Application'
 
 const APPLE_API_KEY_ENV = 'APPLE_API_KEY'
 const APPLE_API_KEY_ID_ENV = 'APPLE_API_KEY_ID'
@@ -48,26 +57,33 @@ export function resolveDesktopAppId(env) {
 /**
  * Resolve and validate the public identity expected on a macOS release.
  * @param {NodeJS.ProcessEnv} env - Packaging environment.
- * @returns {{ signingIdentity: string, teamId: string }} Expected certificate qualifier and Team ID.
+ * @returns {{ signingIdentity: string, teamId: string, authority: string }} Expected certificate qualifier, Team ID, and issuing authority.
  */
 export function resolveMacOSSigningEnvironment(env) {
+  const authority = env[MACOS_SIGNING_AUTHORITY_ENV]?.trim() || DEFAULT_MACOS_SIGNING_AUTHORITY
   const signingIdentity = requireEnvironmentValue(env, MACOS_SIGNING_IDENTITY_ENV)
-  if (signingIdentity.startsWith('Developer ID Application:')) {
-    throw new Error(`desktop release environment: ${MACOS_SIGNING_IDENTITY_ENV} must omit the "Developer ID Application:" prefix`)
+  if (signingIdentity.startsWith(`${authority}:`)) {
+    throw new Error(`desktop release environment: ${MACOS_SIGNING_IDENTITY_ENV} must omit the "${authority}:" prefix`)
   }
   const teamId = requireEnvironmentValue(env, MACOS_TEAM_ID_ENV)
   if (!/^[A-Z0-9]{10}$/u.test(teamId)) {
     throw new Error(`desktop release environment: ${MACOS_TEAM_ID_ENV} must contain 10 uppercase letters or digits`)
   }
-  return { signingIdentity, teamId }
+  return { signingIdentity, teamId, authority }
 }
 
 /**
  * Resolve one complete credential set accepted by Apple's notary service.
  * @param {NodeJS.ProcessEnv} env - Packaging environment.
- * @returns {{ appleId: string, appleIdPassword: string, teamId: string } | { appleApiKey: string, appleApiKeyId: string, appleApiIssuer: string } | { keychainProfile: string, keychain?: string }} Notary credentials without the submitted artifact path.
+ * @returns {{ appleId: string, appleIdPassword: string, teamId: string } | { appleApiKey: string, appleApiKeyId: string, appleApiIssuer: string } | { keychainProfile: string, keychain?: string } | undefined} Notary credentials without the submitted artifact path, or undefined when notarization is disabled.
  */
 export function resolveMacOSNotarizationEnvironment(env) {
+  const notarize = env[MACOS_NOTARIZE_ENV]
+  if (notarize !== undefined && !['0', '1'].includes(notarize)) {
+    throw new Error(`desktop release environment: ${MACOS_NOTARIZE_ENV} must be 0 or 1`)
+  }
+  if (notarize === '0') return undefined
+
   const appleIdValues = [env[APPLE_ID_ENV], env[APPLE_APP_SPECIFIC_PASSWORD_ENV], env[APPLE_TEAM_ID_ENV]]
   if (appleIdValues.some(value => value !== undefined)) {
     return {

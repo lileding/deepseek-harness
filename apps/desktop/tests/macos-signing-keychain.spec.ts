@@ -3,7 +3,7 @@ import { dirname } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { withMacOSSigningKeychain } from '../scripts/macos-signing-keychain.mjs'
 
-const environment = { CSC_LINK: '/signing.p12', CSC_KEY_PASSWORD: 'export-secret', DSH_DESKTOP_MACOS_SIGNING_IDENTITY: 'Example (TEAMID1234)' }
+const environment = { CSC_LINK: '/signing.p12', CSC_KEY_PASSWORD: 'export-secret', DSH_DESKTOP_MACOS_SIGNING_IDENTITY: 'Example (TEAMID1234)', DSH_DESKTOP_MACOS_TEAM_ID: 'TEAMID1234' }
 
 describe('temporary macOS signing identity', () => {
   it('scopes signing to the imported identity and removes credentials before invoking the build', async () => {
@@ -24,6 +24,17 @@ describe('temporary macOS signing identity', () => {
     const partition = run.mock.calls.find(([, args]) => args[0] === 'set-key-partition-list')![1]
     expect(partition[partition.indexOf('-k') + 1]).toBe(create[2])
     expect(create[2]).not.toBe(environment.CSC_KEY_PASSWORD)
+  })
+
+  it('signs the probe with the configured certificate authority', async () => {
+    const run = vi.fn<(command: string, args: string[]) => void>()
+    await withMacOSSigningKeychain(
+      { ...environment, DSH_DESKTOP_MACOS_SIGNING_AUTHORITY: 'Apple Development' },
+      async () => {},
+      run,
+    )
+    const sign = run.mock.calls.find(([command, args]) => command === '/usr/bin/codesign' && args[0] === '--force')![1]
+    expect(sign[sign.indexOf('--sign') + 1]).toBe('Apple Development: Example (TEAMID1234)')
   })
 
   it.each(['import', '--force', 'build'])('cleans up and prevents subsequent work after %s fails', async (stage) => {

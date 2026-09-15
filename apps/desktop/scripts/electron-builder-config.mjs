@@ -54,7 +54,7 @@ export function createElectronBuilderConfig(
   const packagesWindows = resolvedPlatform === 'win32'
   if (resolvedPlatform === 'win32') installWindowsDirectoryInstaller()
   const macOSSigning = packagesMacOS ? resolveMacOSSigningEnvironment(env) : undefined
-  if (packagesMacOS) resolveMacOSNotarizationEnvironment(env)
+  const macOSNotarization = packagesMacOS ? resolveMacOSNotarizationEnvironment(env) : undefined
   const buildPaths = desktopTargetBuildPaths(resolveDesktopBuildTarget(env, hostPlatform, hostArch))
   let primaryRuntimeDestination
   const windowsSigner = packagesWindows && !unsigned
@@ -126,7 +126,7 @@ export function createElectronBuilderConfig(
       hardenedRuntime: true,
       // ASAR-unpacked native runtime files are pre-signed; PAK resources are sealed by their enclosing bundle.
       signIgnore: ['/Contents/Resources/app\\.asar\\.unpacked/dsh(?:/|$)', '/Contents/Resources/runtime/primary-runtime(?:/|$)', '\\.pak$'],
-      notarize: true,
+      notarize: macOSNotarization !== undefined,
       target: ['dmg', 'zip'],
     },
     dmg: {

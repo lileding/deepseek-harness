@@ -193,6 +193,19 @@ describe('parallel macOS artifacts', () => {
     } finally { await rm(f.root, { recursive: true, force: true }) }
   })
 
+  it('zips a signed App without submitting it when notarization is disabled', async () => {
+    const f = await fixture()
+    try {
+      const apple: MacOSArtifactOperations = { ...f.apple, notarize: vi.fn(), verifyNotarization: vi.fn() }
+      const environment = { ...f.request.environment, DSH_DESKTOP_MACOS_NOTARIZE: '0' }
+      await packageMacOSArtifacts({ ...f.request, environment }, f.build, apple)
+      expect(apple.notarize).not.toHaveBeenCalled()
+      expect(apple.verifyNotarization).not.toHaveBeenCalled()
+      expect(JSON.parse(await readFile(join(f.request.artifactsRoot, `${f.base}.zip`), 'utf8')))
+        .toEqual({ payload: 'signed content', appTicket: false })
+    } finally { await rm(f.root, { recursive: true, force: true }) }
+  })
+
   it('passes the actual App and isolated output directory to each single-target builder', () => {
     const target = resolveDesktopPackageTarget('mac-arm64', 'darwin', 'arm64')
     for (const format of ['zip', 'dmg'] as const) {
