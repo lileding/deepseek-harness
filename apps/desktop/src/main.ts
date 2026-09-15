@@ -587,8 +587,23 @@ async function main(): Promise<void> {
   // A custom application menu replaces Electron's default menu, so macOS needs
   // its standard menus and application hide commands declared explicitly.
   const darwin = process.platform === 'darwin'
+  // Zoom roles scale the focused window's web contents, which is also the plugin manager's.
+  const viewMenu: MenuItemConstructorOptions = {
+    label: currentDesktopLocale().messages.viewMenu,
+    submenu: [
+      // The zoomIn role's default `Plus` accelerator is Shift+=, which neither fires on a plain
+      // Cmd+= nor reads as Cmd+ in the menu; `=` is the key macOS applications actually bind.
+      { role: 'zoomIn', label: currentDesktopLocale().messages.zoomInMenu, accelerator: 'CommandOrControl+=' },
+      // Keep the shifted chord working for layouts where Cmd++ is the reachable spelling.
+      { role: 'zoomIn', label: currentDesktopLocale().messages.zoomInMenu, accelerator: 'CommandOrControl+Shift+=', visible: false },
+      { role: 'zoomOut', label: currentDesktopLocale().messages.zoomOutMenu },
+      { role: 'resetZoom', label: currentDesktopLocale().messages.resetZoomMenu },
+      { type: 'separator' },
+      { role: 'togglefullscreen', label: currentDesktopLocale().messages.toggleFullScreenMenu },
+    ],
+  }
   const platformMenus: MenuItemConstructorOptions[] = darwin
-    ? [{ role: 'fileMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }]
+    ? [{ role: 'fileMenu' }, { role: 'editMenu' }, viewMenu, { role: 'windowMenu' }]
     : [{ role: 'editMenu' }]
   const hideCommands: MenuItemConstructorOptions[] = darwin
     ? [{ role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }]

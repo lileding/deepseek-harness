@@ -580,13 +580,34 @@ describe('desktop main startup', () => {
       .find(items => items.some(item => item.role === 'editMenu'))
     if (template === undefined) throw new Error('application menu missing')
     expect(template.map(describeItem)).toEqual(platform === 'darwin'
-      ? ['Desktop test', 'fileMenu', 'editMenu', 'windowMenu']
+      ? ['Desktop test', 'fileMenu', 'editMenu', en.viewMenu, 'windowMenu']
       : ['Application', 'editMenu'])
     const application = template[0]!.submenu as MenuItemConstructorOptions[]
     expect(application.map(describeItem)).toEqual(platform === 'darwin'
       ? ['about', 'separator', en.checkUpdatesMenu, 'separator', 'hide', 'hideOthers', 'unhide', 'separator', 'quit']
       : ['about', 'separator', en.checkUpdatesMenu, 'separator', 'quit'])
     expect(harness.menu.setApplicationMenu).toHaveBeenCalledOnce()
+  })
+
+  it('installs view roles that scale the focused window', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin')
+    await import('../src/main.ts')
+    await harness.preparing.promise
+    const template = harness.menu.buildFromTemplate.mock.calls
+      .map(call => call[0])
+      .find(items => items.some(item => item.role === 'editMenu'))
+    if (template === undefined) throw new Error('application menu missing')
+    const view = template.find(item => item.label === en.viewMenu)
+    const submenu = view?.submenu
+    if (!Array.isArray(submenu)) throw new Error('view menu missing')
+    expect(submenu.map(item => item.role ?? item.type)).toEqual([
+      'zoomIn', 'zoomIn', 'zoomOut', 'resetZoom', 'separator', 'togglefullscreen',
+    ])
+    // Zoom In binds the plain `=` chord; the shifted alias stays hidden beside it.
+    expect(submenu.filter(item => item.role === 'zoomIn').map(item => [item.accelerator, item.visible ?? true]))
+      .toEqual([['CommandOrControl+=', true], ['CommandOrControl+Shift+=', false]])
+    expect(submenu.find(item => item.role === 'resetZoom')?.label).toBe(en.resetZoomMenu)
+    expect(submenu.find(item => item.role === 'togglefullscreen')?.label).toBe(en.toggleFullScreenMenu)
   })
 
   it('attaches Host socket credentials only to the owned application origin and window', async () => {
