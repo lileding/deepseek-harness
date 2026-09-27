@@ -122,6 +122,8 @@ Every package command checks the application ID, update origin, and mode-specifi
 pnpm --dir apps/desktop run check:package
 ```
 
+`DSH_DESKTOP_MACOS_SIGNING_AUTHORITY` names the certificate authority expected on the release and defaults to `Developer ID Application`. `DSH_DESKTOP_MACOS_NOTARIZE` accepts `0` to skip the notary submission and its ticket verification, and `1` or an absent value to require the complete notarytool credential strategy above; any other value is rejected.
+
 `prepare:desktop` is not a prerequisite:
 
 ```sh

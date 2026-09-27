@@ -123,6 +123,8 @@ Workspace 开发使用 Electron RunAsNode 运行当前 CLI 与私有 Desktop Hos
 pnpm --dir apps/desktop run check:package
 ```
 
+`DSH_DESKTOP_MACOS_SIGNING_AUTHORITY` 指定发布所需证书的颁发机构，默认值为 `Developer ID Application`。`DSH_DESKTOP_MACOS_NOTARIZE` 取 `0` 时跳过公证提交与票据验证，取 `1` 或未设置时要求上文完整的 notarytool 凭据方案；其他取值会被拒绝。
+
 无需提前执行 `prepare:desktop`：
 
 ```sh
